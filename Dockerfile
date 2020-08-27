@@ -27,7 +27,7 @@ CMD [ "java","-jar", "c:\jenkins\jenkins.war" ]
 FROM microsoft/windowsservercore
 
 RUN powershell -Command `
-    wget 'http://javadl.oracle.com/webapps/download/AutoDL?BundleId=210185' -Outfile 'C:\jreinstaller.exe' ; `
+    wget "http://javadl.oracle.com/webapps/download/AutoDL?BundleId=210185" -Outfile "C:\jreinstaller.exe" ; `
     Start-Process -filepath C:\jreinstaller.exe -passthru -wait -argumentlist "/s,INSTALLDIR=c:\Java\jre1.8.0_91" ; `
     del C:\jreinstaller.exe
 
