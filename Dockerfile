@@ -1,37 +1,39 @@
-# More on the blog @ http://blog.alexellis.io
+# windows dockerfile to run jenkins ci server---pull base image from ms 2019 server
 
-# Here you'll find - 1) Jenkins 2.0 Dockerfile for Windows Containers + 2) Java base image.
+FROM mcr.microsoft.com/windows/servercore:ltsc2019
 
+#===Know you maintener====
 
-# 1) Jenkins 2.0 Dockerfile:
-# docker build windows-jenkins:latest
+LABEL maintainer="Abraham Ogba"
 
-# docker run -ti -p 8080:8080 windows-jenkins
+ENV CATALINA_HOME C:\\jenkins\\apache-tomcat-8.5.57
 
-FROM windows-java:latest
+#==create jenkins install directory(folder)===
 
-ENV HOME /jenkins
-ENV JENKINS_VERSION 2.0
-RUN mkdir \jenkins
-RUN powershell -Command "wget -Uri https://updates.jenkins-ci.org/download/war/2.0/jenkins.war -UseBasicParsing -OutFile /jenkins/jenkins.war"
+RUN powershell -command mkdir C:\jenkins
+
+#==copy tomcat windows zip file to jenkins install directory from currect folder(pwd)
+
+COPY apache-tomcat-8.5.57-windows-x64.zip C:/jenkins/
+
+#==Run powershell command to setup chocolatey(windows package manager) and unzip tomcat zip file====
+
+RUN powershell.exe -Command \
+    Set-ExecutionPolicy Bypass -Scope Process -Force; iex ((New-Object System.Net.WebClient).DownloadString('https://chocolatey.org/install.ps1')); \
+    Expand-Archive -LiteralPath C:\jenkins\apache-tomcat-8.5.57-windows-x64.zip -Destination C:\jenkins
+
+#===copy jenkins war file from current folder(pwd) to tomcat webapps folder)
+
+COPY jenkins.war C:/jenkins/apache-tomcat-8.5.57/webapps/
+
+#===installl java with chocolatey===
+
+RUN choco install jdk8 -y 
+
+#==expose tomcat listener port===
 
 EXPOSE 8080
 
-CMD [ "java","-jar", "c:\jenkins\jenkins.war" ]
+#==tomcat startup script and keep the container running===
 
-# 2) Java Dockerfile
-# docker build windows-java:latest
-# From: https://github.com/StefanScherer/dockerfiles-windows/blob/master/java/Dockerfile
-
-# escape=`
-FROM microsoft/windowsservercore
-
-RUN powershell -Command `
-    wget "http://javadl.oracle.com/webapps/download/AutoDL?BundleId=210185" -Outfile "C:\jreinstaller.exe" ; `
-    Start-Process -filepath C:\jreinstaller.exe -passthru -wait -argumentlist "/s,INSTALLDIR=c:\Java\jre1.8.0_91" ; `
-    del C:\jreinstaller.exe
-
-ENV JAVA_HOME c:\\Java\\jre1.8.0_91
-RUN setx PATH %PATH%;%JAVA_HOME%\bin
-
-CMD [ "java.exe" ]
+CMD powershell -Command C:\\jenkins\\apache-tomcat-8.5.57\\bin\\startup.bat && cmd /c ping -t localhost > NUL
